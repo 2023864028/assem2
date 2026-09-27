@@ -250,3 +250,113 @@ add edx, 5
 **14. bArray라는 이름의 20개의 부호 없는 바이트 배열을 선언하고 모든 요소를 0으로 초기화하라.**
 
 * **답:** `bArray BYTE 20 DUP(0)`
+
+
+**15. 다음 더블워드(double-word) 변수에 대해 메모리의 개별 바이트 순서(가장 낮은 주소부터 가장 높은 주소 순)를 표시하시오.**
+`val1 DWORD 87654321h`
+
+* **풀이 및 답:** x86 아키텍처는 데이터의 최하위 바이트(LSB)를 가장 낮은 메모리 주소에 저장하는 리틀 엔디안(Little-endian) 방식을 사용합니다. 주어진 값 `87654321h`의 바이트 단위 구성은 `87h`, `65h`, `43h`, `21h`입니다. 따라서 메모리에 가장 낮은 주소부터 저장되는 순서는 `21h, 43h, 65h, 87h`가 됩니다.
+
+---
+
+### **3.10 Programming Exercises**
+
+**1. 정수 수식 계산 (Integer Expression Calculation)**
+레지스터를 사용하여 `A = (A + B) - (C + D)` 수식을 계산하는 프로그램을 작성하시오. EAX, EBX, ECX, EDX 레지스터에 임의의 정수 값을 할당하시오.
+
+* **답:**
+```assembly
+.code
+main PROC
+    ; 각 레지스터에 임의의 초기값 할당
+    mov eax, 100  ; A = 100
+    mov ebx, 50   ; B = 50
+    mov ecx, 30   ; C = 30
+    mov edx, 10   ; D = 10
+
+    ; 수식 계산: A = (A + B) - (C + D)
+    add eax, ebx  ; EAX = A + B (150)
+    add ecx, edx  ; ECX = C + D (40)
+    sub eax, ecx  ; EAX = (A + B) - (C + D) (150 - 40 = 110)
+
+    INVOKE ExitProcess, 0
+main ENDP
+
+```
+
+
+
+**2. 심볼릭 정수 상수 (Symbolic Integer Constants)**
+일주일의 7일에 대한 심볼릭 상수를 정의하고, 이 기호들을 초기화 값으로 사용하는 배열 변수를 생성하시오.
+
+* **답:**
+```assembly
+; 심볼릭 상수 정의
+MONDAY = 1
+TUESDAY = 2
+WEDNESDAY = 3
+THURSDAY = 4
+FRIDAY = 5
+SATURDAY = 6
+SUNDAY = 7
+
+.data
+; 심볼릭 상수를 이용한 배열 초기화
+daysArray BYTE MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
+
+```
+
+
+
+**3. 데이터 정의 (Data Definitions)**
+섹션 3.4의 표 3-2에 나열된 각 데이터 타입의 정의를 포함하는 프로그램을 작성하고, 각 변수를 해당 데이터 타입에 일치하는 값으로 초기화하시오. *(참고: 표 3-2의 내용은 보이지 않으나, 일반적인 MASM 기본 데이터 타입을 기준으로 작성합니다.)*
+
+* **답:**
+```assembly
+.data
+valByte   BYTE   10h             ; 8-bit unsigned
+valSbyte  SBYTE  -10             ; 8-bit signed
+valWord   WORD   1000h           ; 16-bit unsigned
+valSword  SWORD  -1000           ; 16-bit signed
+valDword  DWORD  12345678h       ; 32-bit unsigned
+valSdword SDWORD -12345678       ; 32-bit signed
+valFword  FWORD  0               ; 48-bit integer
+valQword  QWORD  1234567890ABCDEFh ; 64-bit integer
+valTbyte  TBYTE  1000000000123456789Ah ; 80-bit integer
+
+```
+
+
+
+**4. 심볼릭 텍스트 상수 (Symbolic Text Constants)**
+여러 문자열 리터럴에 대해 심볼릭 이름을 정의하고, 변수 정의 시 각 심볼릭 이름을 사용하시오.
+
+* **답:**
+```assembly
+; 심볼릭 텍스트 상수 정의
+symGreeting TEXTEQU <"Hello, Assembly!", 0>
+symWarning  TEXTEQU <"Warning: Low Memory", 0>
+
+.data
+; 변수 정의에 심볼릭 이름 사용
+greetingStr BYTE symGreeting
+warningStr  BYTE symWarning
+
+```
+
+
+
+**5. AddTwoSum을 위한 리스팅 파일 (Listing File for AddTwoSum)**
+AddTwoSum 프로그램에 대한 리스팅 파일을 생성하고 기계어 코드 바이트에 대해 설명하시오.
+
+* **답:** 어셈블러(예: Visual Studio 프로젝트 속성 또는 명령줄의 `/Fl` 스위치)를 통해 `.lst` 확장자를 가진 리스팅 파일을 생성할 수 있습니다. 이 파일을 열어보면 소스 코드의 각 줄 왼쪽에 메모리 오프셋과 어셈블러가 생성한 16진수 기계어 코드 바이트(Machine Code Bytes)가 표시됩니다. 예를 들어, `mov eax, 5`라는 명령은 `B8 00000005`와 같은 기계어 바이트 배열로 번역된 것을 확인할 수 있으며, 첫 바이트(`B8`)는 연산(Opcode)과 목적지 레지스터 정보를, 나머지 바이트는 피연산자 상수값(5)을 나타냅니다.
+
+
+
+**6. AddVariables 프로그램 (AddVariables Program)**
+64비트 변수를 사용하도록 AddVariables 프로그램을 수정하고, 어셈블러에서 발생한 구문 오류와 이를 해결하기 위해 취한 단계를 설명하시오.
+
+* **답:** 기존 32비트 프로그램에서 변수를 `DWORD`에서 64비트인 `QWORD`로 변경할 때, 데이터를 이동시키기 위해 32비트 레지스터인 `EAX`를 그대로 사용하면(예: `mov eax, myQword`) 양쪽 피연산자의 크기가 다르기 때문에 **"operand size conflict (피연산자 크기 충돌)"** 또는 "instruction operand must have size"와 같은 구문 오류가 발생합니다.
+
+
+* **해결 단계:** 64비트 어셈블리 환경(ml64)을 사용 중이라면 64비트 크기에 맞는 **`RAX` 레지스터**로 변경(`mov rax, myQword`)하여 크기 불일치를 해결해야 합니다. (만약 32비트 시스템 환경을 유지해야 한다면, `ADD`와 `ADC` 명령어를 사용하여 하위 32비트와 상위 32비트를 나누어 더하는 방식으로 코드를 재작성해야 합니다.)
