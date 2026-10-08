@@ -22,6 +22,23 @@ loop L2 ; repeat the inner loop
 ; --- INNER LOOP END ---
 pop ecx ; restore outer loop count
 loop L1 ; repeat the outer loop
+------------------------------------
+.data
+aName BYTE “I like StarII",0
+nameSize = ($ - aName) - 1 ; nameSize = 12
+.code
+mov ecx,nameSize
+mov esi,0
+L1: movzx eax,aName[esi] ; get character
+push eax ; push on stack
+inc esi
+Loop L1
+mov ecx,nameSize
+mov esi,0
+L2: pop eax ; get character
+mov aName[esi],al ; store in string
+inc esi
+Loop L2
 
 이 코드는 **문자열을 스택(Stack)에 넣었다가 다시 꺼내서 순서를 뒤집는 코드**입니다.
 
