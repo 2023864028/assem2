@@ -271,6 +271,7 @@ call WriteHex      ; 출력 함수 호출 (환경에 따라 함수명은 다를 
 * **해설:** 스택에 있는 값을 꺼내기 위해 `POP`을 사용하면 스택에서 데이터가 날아가 버려 `RET` 명령어가 길을 잃게 됩니다. 이를 방지하려면 `MOV` 명령어를 사용하여 스택 포인터가 가리키는 위치(`[esp]`)의 값을 단순히 레지스터로 '복사'만 해오면 스택 상태를 온전히 유지할 수 있습니다.
 
 ---
+5.9 Programming Exercises
 
 ### 1. Draw Text Colors
 
@@ -526,5 +527,219 @@ BetterRandomRange PROC
 BetterRandomRange ENDP
 
 END main
+
+```
+
+### 6. Random Strings
+
+
+
+대문자로만 구성된 길이 $L$의 임의의 문자열을 생성하는 프로시저를 작성하는 문제입니다.
+
+* **핵심 로직:** A~Z는 아스키코드로 65~90입니다. 0부터 25 사이의 난수를 생성한 뒤 65('A')를 더하면 임의의 대문자를 얻을 수 있습니다.
+
+
+
+```assembly
+; 입력: EAX = 문자열 길이(L), EDI = 문자열을 저장할 배열의 포인터
+GenerateRandomString PROC USES eax ecx edi
+    mov ecx, eax            ; ECX에 루프 카운터(L) 설정
+L1:
+    mov eax, 26             ; 0 ~ 25 사이의 난수 생성
+    call RandomRange
+    add eax, 'A'            ; 'A'(65)를 더해 대문자 아스키코드로 변환
+    mov [edi], al           ; 배열에 문자 저장
+    inc edi                 ; 다음 배열 요소로 포인터 이동
+    loop L1
+    
+    mov BYTE PTR [edi], 0   ; 문자열 끝에 Null 종료 문자 추가
+    ret
+GenerateRandomString ENDP
+
+```
+
+---
+
+### 7. Random Screen Locations
+
+
+
+100밀리초의 지연 시간을 두고 임의의 화면 위치 100곳에 단일 문자를 출력하는 프로그램입니다.
+
+* **핵심 로직:** `GetMaxXY`를 호출하여 화면의 최대 X, Y 좌표를 얻은 뒤, 해당 범위 내에서 난수를 생성해 `Gotoxy`로 커서를 이동시킵니다.
+
+
+
+```assembly
+main PROC
+    call Randomize
+    mov ecx, 100            ; 100번 반복
+L1:
+    call GetMaxXY           ; AL = 최대 열(X), AH = 최대 행(Y) 반환 (버전에 따라 반환 레지스터 확인 필요)
+    
+    ; X 좌표 난수 생성
+    movzx eax, al           ; EAX에 최대 X값 복사
+    call RandomRange        ; 0 ~ 최대 X-1 사이의 난수
+    mov dl, al              ; DL에 X 좌표 저장
+
+    ; Y 좌표 난수 생성
+    movzx eax, ah           ; EAX에 최대 Y값 복사
+    call RandomRange
+    mov dh, al              ; DH에 Y 좌표 저장
+
+    call Gotoxy             ; 난수로 생성된 (DL, DH) 위치로 커서 이동
+    mov al, 'X'             ; 출력할 문자
+    call WriteChar
+    
+    mov eax, 100            ; 100ms
+    call Delay              ; 지연
+    loop L1
+    exit
+main ENDP
+
+```
+
+---
+
+### 8. Color Matrix
+
+
+
+전경색과 배경색의 모든 가능한 조합($16 \times 16 = 256$)으로 단일 문자를 출력하는 프로그램입니다.
+
+* **핵심 로직:** 배경색은 상위 4비트, 전경색은 하위 4비트입니다. 색상 코드 = `(배경색 * 16) + 전경색` 공식을 활용하여 중첩 루프를 구성합니다.
+
+
+
+```assembly
+main PROC
+    mov ecx, 16             ; 배경색 루프 카운터 (0~15)
+    mov ebx, 0              ; 배경색 초기값
+OuterLoop:
+    push ecx                ; 바깥쪽 루프 카운터 저장
+    mov ecx, 16             ; 전경색 루프 카운터 (0~15)
+    mov esi, 0              ; 전경색 초기값
+
+InnerLoop:
+    mov eax, ebx            ; EAX = 배경색
+    shl eax, 4              ; 배경색에 16을 곱함 (상위 4비트로 이동)
+    add eax, esi            ; EAX = (배경색 * 16) + 전경색
+    call SetTextColor       ; 색상 적용
+    
+    mov al, 'A'
+    call WriteChar          ; 문자 출력
+
+    inc esi                 ; 다음 전경색
+    loop InnerLoop
+
+    call Crlf               ; 한 줄 출력 후 줄바꿈
+    inc ebx                 ; 다음 배경색
+    pop ecx                 ; 바깥쪽 루프 카운터 복원
+    loop OuterLoop
+
+    ; 기본 색상으로 복구
+    mov eax, 15             ; LightGray on Black
+    call SetTextColor
+    exit
+main ENDP
+
+```
+
+---
+
+### 9. Recursive Procedure
+
+
+
+재귀 프로시저를 조건문 없이 `LOOP` 명령어만을 사용하여 지정된 횟수만큼 호출하는 문제입니다.
+
+* **핵심 로직:** `LOOP` 명령어는 `ECX` 값을 1 감소시키고 0이 아니면 점프합니다. 이를 재귀 호출과 결합하여 횟수를 제한합니다.
+
+
+
+```assembly
+.data
+    counter DWORD 0         ; 실행 횟수를 확인할 전역 카운터
+
+.code
+main PROC
+    mov ecx, 5              ; 재귀를 5번 허용
+    call RecursiveProc
+    exit
+main ENDP
+
+RecursiveProc PROC
+    inc counter             ; 실행될 때마다 카운터 1 증가
+    ; ECX가 0보다 클 때만 다시 자신을 호출하도록 LOOP 사용
+    ; LOOP는 보통 라벨로 점프하지만, 여기서 자신을 호출하는 트릭으로 사용할 수 있음
+    loop RecursiveProc      ; ECX 감소 후 0이 아니면 재귀 호출
+    ret
+RecursiveProc ENDP
+
+```
+
+---
+
+### 10. Fibonacci Generator
+
+
+
+$N$개의 피보나치 수열 값을 생성하여 더블워드(`DWORD`) 배열에 저장하는 문제입니다. $N=47$까지 테스트합니다.
+
+* **핵심 로직:** 피보나치 수열은 이전 두 값의 합입니다. $N=47$의 결과가 약 29억이므로 32비트 범용 레지스터(`EAX`, `EBX`)에 충분히 담깁니다.
+
+
+
+```assembly
+; 입력: ESI = 배열 포인터, ECX = 생성할 개수(N)
+GenerateFibonacci PROC USES eax ebx ecx esi
+    mov eax, 1              ; Fib(1)
+    mov ebx, 0              ; Fib(0)
+    
+L1:
+    ; 다음 피보나치 수 계산: New = EAX + EBX
+    push eax                ; 현재 EAX 보관
+    add eax, ebx            ; EAX = 현재 값 + 이전 값
+    mov [esi], eax          ; 계산된 값을 배열에 저장
+    
+    pop ebx                 ; 이전 EAX 값을 EBX로 이동 (다음 반복을 위해)
+    add esi, TYPE DWORD     ; 포인터를 4바이트 다음으로 이동
+    loop L1
+
+    ret
+GenerateFibonacci ENDP
+
+```
+
+---
+
+### 11. Finding Multiples of K
+
+
+
+크기가 $N$인 바이트 배열에서 $K$의 배수에 해당하는 인덱스를 찾아 해당 배열 요소를 1로 설정하는 문제입니다. (에라토스테네스의 체 기본 원리)
+
+* **핵심 로직:** 나눗셈으로 나머지를 확인하는 조건문을 쓰지 않아도, 인덱스 자체를 $K$씩 증가시키며 루프를 돌면 쉽게 배수를 찾을 수 있습니다.
+
+
+
+```assembly
+; 입력: ESI = 배열 포인터, EBX = K값, ECX = 배열 크기(N)
+FindMultiples PROC USES eax ecx edi
+    mov edi, ebx            ; 인덱스를 K로 시작
+    
+L1:
+    cmp edi, ecx            ; 인덱스가 N보다 크거나 같은지 확인
+    jae Done                ; 범위를 벗어나면 종료
+    
+    ; 배수에 해당하는 인덱스 위치를 1로 설정
+    mov BYTE PTR [esi + edi], 1
+    
+    add edi, ebx            ; 인덱스에 K를 더해 다음 배수로 이동
+    jmp L1                  ; 반복 (Chapter 6 조건문 대신 점프 사용)
+
+Done:
+    ret
+FindMultiples ENDP
 
 ```
