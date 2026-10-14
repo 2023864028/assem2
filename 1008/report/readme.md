@@ -73,3 +73,63 @@ MASM의 `PUSHAD` 명령어는 사용하지 않는 레지스터까지 포함해 8
 
 * **정답: False (거짓)**
 * **해설:** `ESI`와 `EDI`를 포함한 모든 32비트 범용 레지스터는 프로시저에 매개변수를 전달하는 용도로 자유롭게 사용할 수 있습니다.
+
+
+**10. (True/False): The ArraySum procedure (Section 5.2.5) receives a pointer to any array of doublewords.**
+
+* **정답: True (참)**
+* **해설:** 교재의 `ArraySum` 프로시저는 일반적으로 `ESI` 레지스터를 통해 doubleword(32비트) 배열의 시작 주소(포인터)를 전달받아 배열 요소들의 합을 구합니다.
+
+
+
+**11. (True/False): The USES operator lets you name all registers that are modified within a procedure.**
+
+* **정답: True (참)**
+* **해설:** `USES` 연산자는 프로시저 내에서 값이 변경될 가능성이 있는 레지스터들을 나열하여, 프로시저 시작과 끝에 해당 레지스터들의 값을 자동으로 백업하고 복원하도록 지정합니다.
+
+
+
+**12. (True/False): The USES operator only generates PUSH instructions, so you must code POP instructions yourself.**
+
+* **정답: False (거짓)**
+* **해설:** `USES` 연산자는 프로시저 시작 부분에 `PUSH` 명령어들을 자동 생성할 뿐만 아니라, `RET` 명령어 바로 직전에 대응하는 `POP` 명령어들도 자동으로 생성해 줍니다.
+
+
+
+**13. (True/False): The register list in the USES directive must use commas to separate the register names.**
+
+* **정답: False (거짓)**
+* **해설:** MASM에서 `USES` 지시어 뒤에 오는 레지스터 목록은 쉼표(,)가 아니라 공백(Space)이나 탭(Tab)으로 구분해야 합니다. (예: `USES eax ebx ecx`)
+
+
+
+**14. Which statement(s) in the ArraySum procedure would have to be modified so it could accumulate an array of 16-bit words?**
+
+* **정답 및 해설:** 32비트(doubleword)에서 16비트(word) 배열로 변경하려면 두 가지 주요 부분을 수정해야 합니다.
+1. 배열 요소를 더하는 레지스터 크기 변경: `ADD EAX, [ESI]`를 16비트 연산인 `ADD AX, [ESI]`로 변경해야 합니다.
+
+
+2. 포인터 증가량 변경: doubleword는 4바이트이므로 포인터를 4씩 증가시켰지만 (`ADD ESI, 4`), word는 2바이트이므로 다음 요소로 이동하려면 `ADD ESI, 2`로 변경해야 합니다.
+
+
+
+
+
+**15. What will be the final value in EAX after these instructions execute?**
+
+* **정답: 5**
+* **해설:** 스택은 후입선출(LIFO) 구조입니다. `push 5`와 `push 6`을 실행하면 스택 맨 위에는 6이 있습니다. 첫 번째 `pop eax`를 실행하면 6이 EAX에 들어가고, 두 번째 `pop eax`를 실행하면 스택에 남아있던 5가 EAX에 들어가므로 최종 값은 5가 됩니다.
+
+
+
+**16. Which statement is true about what will happen when the example code runs?**
+
+* **정답: d. The program will halt with a runtime error on Line 11**
+* **해설:** 4번 줄의 `call Ex2Sub`가 실행되면 돌아올 반환 주소(Return Address)가 스택에 푸시됩니다. 하지만 서브루틴 내부의 10번 줄(`pop eax`)에서 이 반환 주소를 `EAX`로 팝(pop)해버립니다. 이로 인해 11번 줄의 `ret` 명령어가 실행될 때, 스택의 다음 값인 `20`을 반환 주소로 착각하고 이동하려 시도하게 되므로 11번 줄에서 런타임 에러(메모리 참조 오류)가 발생합니다.
+
+
+
+**17. Which statement is true about what will happen when the example code runs?**
+
+* *(참고: 이미지가 12번 줄에서 잘려 객관식 보기가 보이지 않으므로 코드의 실행 결과를 설명해 드립니다.)*
+* **해설:** `Ex3Sub` 프로시저가 호출되기 전, `main`에서 `EAX`는 30이었습니다. 10번 줄의 `pusha` 명령어는 호출 시점의 모든 범용 레지스터 상태(EAX=30 포함)를 스택에 일괄 저장합니다. 11번 줄에서 `mov eax,80`으로 값이 80으로 바뀌지만, 12번 줄의 `popa` 명령어가 스택에 저장해둔 이전 레지스터 값들을 모두 복원합니다. 따라서 **12번 줄 실행 직후 EAX는 다시 30으로 되돌아갑니다.**
