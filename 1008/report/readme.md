@@ -269,3 +269,262 @@ call WriteHex      ; 출력 함수 호출 (환경에 따라 함수명은 다를 
 
 
 * **해설:** 스택에 있는 값을 꺼내기 위해 `POP`을 사용하면 스택에서 데이터가 날아가 버려 `RET` 명령어가 길을 잃게 됩니다. 이를 방지하려면 `MOV` 명령어를 사용하여 스택 포인터가 가리키는 위치(`[esp]`)의 값을 단순히 레지스터로 '복사'만 해오면 스택 상태를 온전히 유지할 수 있습니다.
+
+---
+
+### 1. Draw Text Colors
+
+
+
+반복문을 사용하여 동일한 문자열을 네 가지 다른 색상으로 출력하는 프로그램입니다.
+
+```assembly
+INCLUDE Irvine32.inc
+
+.data
+    strMsg BYTE "This is a colored string.", 0
+
+.code
+main PROC
+    mov ecx, 4          ; 반복 횟수 4번 설정
+    mov eax, 1          ; 초기 색상 (Blue=1)
+
+L1:
+    call SetTextColor   ; EAX에 저장된 색상 코드로 텍스트 색상 변경
+    mov edx, OFFSET strMsg
+    call WriteString    ; 문자열 출력
+    call Crlf           ; 줄 바꿈
+
+    inc eax             ; 다음 색상 코드로 증가 (1->2->3->4)
+    loop L1             ; ECX가 0이 될 때까지 L1 반복
+
+    ; 프로그램 종료 전 색상을 기본값(White=15)으로 복구
+    mov eax, white
+    call SetTextColor
+    
+    exit
+main ENDP
+END main
+
+```
+
+---
+
+### 2. Linking Array Items
+
+
+
+주어진 `links` 배열의 인덱스를 따라가며 문자를 올바른 순서대로 읽어 새로운 배열에 복사하는 프로그램입니다. `chars`는 `BYTE`형, `links`는 `DWORD`형으로 선언해야 합니다.
+
+```assembly
+INCLUDE Irvine32.inc
+
+.data
+    start = 1
+    chars BYTE 'H','A','C','E','B','D','F','G'
+    links DWORD 0, 4, 5, 6, 2, 3, 7, 0
+    
+    output BYTE LENGTHOF chars DUP(?) ; 결과를 저장할 배열
+    
+.code
+main PROC
+    mov esi, start      ; 현재 읽고 있는 인덱스 (초기값: start = 1)
+    mov edi, 0          ; output 배열에 저장할 인덱스
+    mov ecx, LENGTHOF chars ; 문자열의 길이(8)만큼 반복
+
+L1:
+    ; 1. 현재 인덱스(esi)에 해당하는 문자 가져와서 output 배열에 복사
+    mov al, chars[esi]  ; chars는 BYTE 단위이므로 1바이트 오프셋 사용
+    mov output[edi], al
+    inc edi             ; output 인덱스 증가
+
+    ; 2. 다음 인덱스 찾기
+    ; links는 DWORD(4바이트) 배열이므로 인덱스에 4를 곱해서 접근해야 함
+    mov esi, links[esi * 4] 
+    loop L1
+
+    ; 결과 출력 (확인용)
+    mov edx, OFFSET output
+    call WriteString
+    call Crlf
+    
+    exit
+main ENDP
+END main
+
+```
+
+---
+
+### 3. Simple Addition (1)
+
+
+
+화면을 지우고, 커서를 화면 중앙 부근으로 이동한 뒤, 두 정수를 입력받아 합을 출력하는 프로그램입니다.
+
+```assembly
+INCLUDE Irvine32.inc
+
+.data
+    prompt1 BYTE "Enter first integer: ", 0
+    prompt2 BYTE "Enter second integer: ", 0
+    resultMsg BYTE "The sum is: ", 0
+
+.code
+main PROC
+    call Clrscr         ; 화면 지우기
+
+    mov dh, 12          ; Y 좌표 (화면 중간쯤인 12번째 줄)
+    mov dl, 30          ; X 좌표 (화면 중간쯤인 30번째 칸)
+    call Gotoxy         ; 커서 이동
+
+    ; 첫 번째 정수 입력
+    mov edx, OFFSET prompt1
+    call WriteString
+    call ReadInt
+    mov ebx, eax        ; 첫 번째 정수를 EBX에 잠시 보관
+
+    ; 두 번째 줄로 이동
+    inc dh
+    mov dl, 30
+    call Gotoxy
+
+    ; 두 번째 정수 입력
+    mov edx, OFFSET prompt2
+    call WriteString
+    call ReadInt
+
+    ; 덧셈 수행
+    add eax, ebx        ; EAX = 두 번째 정수 + 첫 번째 정수 (EBX)
+
+    ; 결과 출력
+    inc dh
+    mov dl, 30
+    call Gotoxy
+    mov edx, OFFSET resultMsg
+    call WriteString
+    call WriteInt       ; EAX에 저장된 합을 출력
+    call Crlf
+
+    exit
+main ENDP
+END main
+
+```
+
+---
+
+### 4. Simple Addition (2)
+
+
+
+3번 문제의 코드를 3번 반복하는 루프를 만들고, 매 반복마다 화면을 지우도록 수정한 프로그램입니다.
+
+```assembly
+INCLUDE Irvine32.inc
+
+.data
+    prompt1 BYTE "Enter first integer: ", 0
+    prompt2 BYTE "Enter second integer: ", 0
+    resultMsg BYTE "The sum is: ", 0
+
+.code
+main PROC
+    mov ecx, 3          ; 전체 프로세스를 3번 반복
+
+OuterLoop:
+    push ecx            ; 바깥쪽 루프의 카운터를 스택에 백업
+    
+    call Clrscr         ; 매 반복마다 화면 지우기
+
+    mov dh, 12
+    mov dl, 30
+    call Gotoxy
+
+    mov edx, OFFSET prompt1
+    call WriteString
+    call ReadInt
+    mov ebx, eax
+
+    inc dh
+    mov dl, 30
+    call Gotoxy
+    mov edx, OFFSET prompt2
+    call WriteString
+    call ReadInt
+
+    add eax, ebx
+
+    inc dh
+    mov dl, 30
+    call Gotoxy
+    mov edx, OFFSET resultMsg
+    call WriteString
+    call WriteInt
+    call Crlf
+    
+    call WaitMsg        ; 사용자가 결과를 볼 수 있도록 잠시 멈춤
+
+    pop ecx             ; 바깥쪽 루프 카운터 복구
+    loop OuterLoop
+
+    exit
+main ENDP
+END main
+
+```
+
+---
+
+### 5. BetterRandomRange Procedure
+
+
+
+주어진 $M$(`EBX`)과 $N-1$(`EAX` - 1) 사이의 난수를 생성하는 함수를 만들고, 이를 50번 호출하여 테스트하는 프로그램입니다.
+
+```assembly
+INCLUDE Irvine32.inc
+
+.code
+main PROC
+    call Randomize      ; 난수 발생기 시드 초기화
+
+    mov ecx, 50         ; 50번 반복 테스트 설정
+
+L1:
+    mov ebx, -300       ; Lower bound (M)
+    mov eax, 100        ; Upper bound (N)
+    call BetterRandomRange
+    
+    call WriteInt       ; 생성된 난수 출력
+    call Crlf
+    
+    loop L1
+
+    exit
+main ENDP
+
+; --------------------------------------------------------
+; BetterRandomRange
+; M과 N-1 사이의 난수를 생성합니다.
+; 입력: EBX = M (하한값), EAX = N (상한값)
+; 반환: EAX = 생성된 난수 (M <= EAX < N)
+; --------------------------------------------------------
+BetterRandomRange PROC
+    push ebx            ; EBX(M) 값 백업
+
+    ; RandomRange 함수는 0 ~ (매개변수 - 1) 사이의 난수를 생성함.
+    ; M ~ N-1을 구하려면, (N - M) 범위의 난수를 구한 뒤 M을 더하면 됨.
+    sub eax, ebx        ; EAX = N - M
+    call RandomRange    ; EAX = 0 ~ (N - M - 1) 사이의 난수 발생
+
+    add eax, ebx        ; 발생된 난수 + M
+                        ; 최종 EAX = M ~ N - 1
+
+    pop ebx             ; EBX 복구
+    ret
+BetterRandomRange ENDP
+
+END main
+
+```
